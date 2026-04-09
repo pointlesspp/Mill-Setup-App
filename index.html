@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITC Mill Sheets</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#f4f4f4" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 16px;
+      background: #f4f4f4;
+      margin: 0;
+    }
+
+    #app {
+      max-width: 1100px;
+      margin: auto;
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      box-sizing: border-box;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 4px 0;
+      font-size: 16px;
+      box-sizing: border-box;
+      border-radius: 8px;
+      border: 1px solid #bbb;
+    }
+
+    button {
+      cursor: pointer;
+      background: #f7f7f7;
+    }
+
+    button:hover {
+      background: #ececec;
+    }
+
+    .top-actions,
+    .level-actions,
+    .sheet-actions,
+    .backup-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      background: #eee;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .item-name-btn {
+      flex: 1;
+      text-align: left;
+      min-width: 160px;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 12px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    table {
+      border-collapse: collapse;
+      min-width: 100%;
+      background: white;
+    }
+
+    th, td {
+      border: 1px solid #999;
+      padding: 8px;
+      text-align: center;
+      min-width: 120px;
+      vertical-align: top;
+    }
+
+    td input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #bbb;
+    }
+
+    .small-btn {
+      padding: 6px 8px;
+      font-size: 14px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .header-box,
+    .row-name-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .section-card {
+      background: #fafafa;
+      border: 1px solid #e3e3e3;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .muted {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .path-text {
+      font-size: 14px;
+      color: #444;
+      margin-bottom: 10px;
+      word-break: break-word;
+    }
+
+    #importFile {
+      display: none;
+    }
+
+    @media (min-width: 700px) {
+      .top-actions,
+      .level-actions,
+      .sheet-actions,
+      .backup-actions {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .top-actions input,
+      .level-actions input,
+      .sheet-actions input {
+        min-width: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>ITC Mill Sheets</h1>
+
+    <div id="main-section">
+      <div class="section-card">
+        <div class="top-actions">
+          <input type="text" id="mainCategoryName" placeholder="New main category" />
+          <button id="addMainCategoryBtn">Add Main Category</button>
+        </div>
+
+        <div class="backup-actions">
+          <button id="exportBtn">Export Backup</button>
+          <button id="importBtn">Import Backup</button>
+          <input type="file" id="importFile" accept=".json,application/json" />
+        </div>
+
+        <div class="muted">Tap a main category to open its sub-categories.</div>
+      </div>
+
+      <ul id="mainCategoryList"></ul>
+    </div>
+
+    <div id="sub-section" class="hidden">
+      <div class="section-card">
+        <h2 id="subSectionTitle"></h2>
+        <div class="path-text" id="subPathText"></div>
+
+        <div class="level-actions">
+          <input type="text" id="subCategoryName" placeholder="New sub-category" />
+          <button id="addSubCategoryBtn">Add Sub-Category</button>
+        </div>
+
+        <div class="muted">Tap a sub-category to open child sub-categories.</div>
+      </div>
+
+      <ul id="subCategoryList"></ul>
+      <br />
+      <button id="backToMainBtn">Back to Main Categories</button>
+    </div>
+
+    <div id="child-section" class="hidden">
+      <div class="section-card">
+        <h2 id="childSectionTitle"></h2>
+        <div class="path-text" id="childPathText"></div>
+
+        <div class="level-actions">
+          <input type="text" id="childCategoryName" placeholder="New child sub-category" />
+          <button id="addChildCategoryBtn">Add Child Sub-Category</button>
+        </div>
+
+        <div class="muted">Tap a child sub-category to open its data sheet.</div>
+      </div>
+
+      <ul id="childCategoryList"></ul>
+      <br />
+      <button id="backToSubBtn">Back to Sub-Categories</button>
+    </div>
+
+    <div id="sheet-section" class="hidden">
+      <div class="section-card">
+        <h2 id="sheetTitle"></h2>
+        <div class="path-text" id="sheetPathText"></div>
+
+        <div class="sheet-actions">
+          <input type="text" id="columnName" placeholder="New column name" />
+          <button id="addColumnBtn">Add Column</button>
+        </div>
+
+        <div class="sheet-actions">
+          <input type="text" id="rowName" placeholder="New row name" />
+          <button id="addRowBtn">Add Row</button>
+        </div>
+
+        <div class="muted">Swipe sideways if the table gets wide.</div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="sheetTable"></table>
+      </div>
+
+      <br />
+      <button id="backToChildBtn">Back to Child Sub-Categories</button>
+    </div>
+  </div>
+
+  <script>
+    let data = JSON.parse(localStorage.getItem("categorySheetsV2")) || {};
+
+    let currentMainCategory = null;
+    let currentSubCategory = null;
+    let currentChildCategory = null;
+
+    const mainSection = document.getElementById("main-section");
+    const subSection = document.getElementById("sub-section");
+    const childSection = document.getElementById("child-section");
+    const sheetSection = document.getElementById("sheet-section");
+
+    const mainCategoryList = document.getElementById("mainCategoryList");
+    const subCategoryList = document.getElementById("subCategoryList");
+    const childCategoryList = document.getElementById("childCategoryList");
+
+    const mainCategoryNameInput = document.getElementById("mainCategoryName");
+    const subCategoryNameInput = document.getElementById("subCategoryName");
+    const childCategoryNameInput = document.getElementById("childCategoryName");
+
+    const addMainCategoryBtn = document.getElementById("addMainCategoryBtn");
+    const addSubCategoryBtn = document.getElementById("addSubCategoryBtn");
+    const addChildCategoryBtn = document.getElementById("addChildCategoryBtn");
+
+    const subSectionTitle = document.getElementById("subSectionTitle");
+    const childSectionTitle = document.getElementById("childSectionTitle");
+    const sheetTitle = document.getElementById("sheetTitle");
+
+    const subPathText = document.getElementById("subPathText");
+    const childPathText = document.getElementById("childPathText");
+    const sheetPathText = document.getElementById("sheetPathText");
+
+    const columnNameInput = document.getElementById("columnName");
+    const addColumnBtn = document.getElementById("addColumnBtn");
+    const rowNameInput = document.getElementById("rowName");
+    const addRowBtn = document.getElementById("addRowBtn");
+    const sheetTable = document.getElementById("sheetTable");
+
+    const backToMainBtn = document.getElementById("backToMainBtn");
+    const backToSubBtn = document.getElementById("backToSubBtn");
+    const backToChildBtn = document.getElementById("backToChildBtn");
+
+    const exportBtn = document.getElementById("exportBtn");
+    const importBtn = document.getElementById("importBtn");
+    const importFile = document.getElementById("importFile");
+
+    function saveData() {
+      localStorage.setItem("categorySheetsV2", JSON.stringify(data));
+    }
+
+    function createMainCategoryObject() {
+      return {
+        subcategories: {}
+      };
+    }
+
+    function createSubCategoryObject() {
+      return {
+        children: {}
+      };
+    }
+
+    function createChildCategoryObject() {
+      return {
+        columns: [],
+        rows: []
+      };
+    }
+
+    function showSection(sectionName) {
+      mainSection.classList.add("hidden");
+      subSection.classList.add("hidden");
+      childSection.classList.add("hidden");
+      sheetSection.classList.add("hidden");
+
+      if (sectionName === "main") mainSection.classList.remove("hidden");
+      if (sectionName === "sub") subSection.classList.remove("hidden");
+      if (sectionName === "child") childSection.classList.remove("hidden");
+      if (sectionName === "sheet") sheetSection.classList.remove("hidden");
+    }
+
+    function getCurrentSubCategoryObject() {
+      if (!currentMainCategory || !currentSubCategory) return null;
+      return data[currentMainCategory]?.subcategories?.[currentSubCategory] || null;
+    }
+
+    function getCurrentChildCategoryObject() {
+      const subObj = getCurrentSubCategoryObject();
+      if (!subObj || !currentChildCategory) return null;
+      return subObj.children?.[currentChildCategory] || null;
+    }
+
+    function renderMainCategories() {
+      mainCategoryList.innerHTML = "";
+      const mainCategories = Object.keys(data);
+
+      if (mainCategories.length === 0) {
+        const empty = document.createElement("li");
+        empty.textContent = "No main categories yet.";
+        mainCategoryList.appendChild(empty);
+        return;
+      }
+
+      mainCategories.forEach(mainName => {
+        const li = document.createElement("li");
+
+        const openBtn = document.createElement("button");
+        openBtn.textContent = mainName;
+        openBtn.className = "item-name-btn";
+        openBtn.addEventListener("click", () => openMainCategory(mainName));
+
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+
+        const renameBtn = document.createElement("button");
+        renameBtn.textContent = "Rename";
+        renameBtn.className = "small-btn";
+        renameBtn.addEventListener("click", () => renameMainCategory(mainName));
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.className = "small-btn";
+        deleteBtn.addEventListener("click", () => {
+          if (!confirm(`Delete main category "${mainName}" and everything inside it?`)) return;
+          delete data[mainName];
+          saveData();
+          renderMainCategories();
+        });
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
+        li.appendChild(openBtn);
+        li.appendChild(actions);
+        mainCategoryList.appendChild(li);
+      });
+    }
+
+    function openMainCategory(mainName) {
+      currentMainCategory = mainName;
+      currentSubCategory = null;
+      currentChildCategory = null;
+
+      subSectionTitle.textContent = `${mainName} - Sub-Categories`;
+      subPathText.textContent = `Main Category: ${mainName}`;
+
+      renderSubCategories();
+      showSection("sub");
+    }
+
+    function renderSubCategories() {
+      subCategoryList.innerHTML = "";
+
+      if (!currentMainCategory || !data[currentMainCategory]) return;
+
+      const subcategories = Object.keys(data[currentMainCategory].subcategories);
+
+      if (subcategories.length === 0) {
+        const empty = document.createElement("li");
+        empty.textContent = "No sub-categories yet.";
+        subCategoryList.appendChild(empty);
+        return;
+      }
+
+      subcategories.forEach(subName => {
+        const li = document.createElement("li");
+
+        const openBtn = document.createElement("button");
+        openBtn.textContent = subName;
+        openBtn.className = "item-name-btn";
+        openBtn.addEventListener("click", () => openSubCategory(subName));
+
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+
+        const renameBtn = document.createElement("button");
+        renameBtn.textContent = "Rename";
+        renameBtn.className = "small-btn";
+        renameBtn.addEventListener("click", () => renameSubCategory(subName));
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.className = "small-btn";
+        deleteBtn.addEventListener("click", () => {
+          if (!confirm(`Delete sub-category "${subName}" and everything inside it?`)) return;
+          delete data[currentMainCategory].subcategories[subName];
+          saveData();
+          renderSubCategories();
+        });
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
+        li.appendChild(openBtn);
+        li.appendChild(actions);
+        subCategoryList.appendChild(li);
+      });
+    }
+    function openSubCategory(subName) {
+      currentSubCategory = subName;
+      currentChildCategory = null;
+
+      childSectionTitle.textContent = `${subName} - Child Sub-Categories`;
+      childPathText.textContent = `Main Category: ${currentMainCategory} > Sub-Category: ${subName}`;
+
+      renderChildCategories();
+      showSection("child");
+    }
+
+    function renderChildCategories() {
+      childCategoryList.innerHTML = "";
+
+      const subObj = getCurrentSubCategoryObject();
+      if (!subObj) return;
+
+      const childNames = Object.keys(subObj.children);
+
+      if (childNames.length === 0) {
+        const empty = document.createElement("li");
+        empty.textContent = "No child sub-categories yet.";
+        childCategoryList.appendChild(empty);
+        return;
+      }
+
+      childNames.forEach(childName => {
+        const li = document.createElement("li");
+
+        const openBtn = document.createElement("button");
+        openBtn.textContent = childName;
+        openBtn.className = "item-name-btn";
+        openBtn.addEventListener("click", () => openChildCategory(childName));
+
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+
+        const renameBtn = document.createElement("button");
+        renameBtn.textContent = "Rename";
+        renameBtn.className = "small-btn";
+        renameBtn.addEventListener("click", () => renameChildCategory(childName));
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.className = "small-btn";
+        deleteBtn.addEventListener("click", () => {
+          if (!confirm(`Delete child sub-category "${childName}" and its sheet?`)) return;
+          delete getCurrentSubCategoryObject().children[childName];
+          saveData();
+          renderChildCategories();
+        });
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
+        li.appendChild(openBtn);
+        li.appendChild(actions);
+        childCategoryList.appendChild(li);
+      });
+    }
+
+    function openChildCategory(childName) {
+      currentChildCategory = childName;
+
+      sheetTitle.textContent = `${childName} - Data Sheet`;
+      sheetPathText.textContent = `Main Category: ${currentMainCategory} > Sub-Category: ${currentSubCategory} > Child Sub-Category: ${childName}`;
+
+      renderSheet();
+      showSection("sheet");
+    }
+
+    function renderSheet() {
+      const sheet = getCurrentChildCategoryObject();
+      if (!sheet) return;
+
+      sheetTable.innerHTML = "";
+
+      const headerRow = document.createElement("tr");
+
+      const rowNameHeader = document.createElement("th");
+      rowNameHeader.textContent = "Row Name";
+      headerRow.appendChild(rowNameHeader);
+
+      sheet.columns.forEach((col, colIndex) => {
+        const th = document.createElement("th");
+
+        const box = document.createElement("div");
+        box.className = "header-box";
+
+        const title = document.createElement("div");
+        title.textContent = col;
+
+        const renameBtn = document.createElement("button");
+        renameBtn.textContent = "Rename";
+        renameBtn.className = "small-btn";
+        renameBtn.addEventListener("click", () => renameColumn(colIndex));
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Remove";
+        deleteBtn.className = "small-btn";
+        deleteBtn.addEventListener("click", () => deleteColumn(colIndex));
+
+        box.appendChild(title);
+        box.appendChild(renameBtn);
+        box.appendChild(deleteBtn);
+        th.appendChild(box);
+        headerRow.appendChild(th);
+      });
+
+      const removeHeader = document.createElement("th");
+      removeHeader.textContent = "Delete Row";
+      headerRow.appendChild(removeHeader);
+
+      sheetTable.appendChild(headerRow);
+
+      sheet.rows.forEach((row, rowIndex) => {
+        const tr = document.createElement("tr");
+
+        const rowNameCell = document.createElement("td");
+        const rowBox = document.createElement("div");
+        rowBox.className = "row-name-box";
+
+        const rowTitle = document.createElement("div");
+        rowTitle.textContent = row.name;
+
+        const renameBtn = document.createElement("button");
+        renameBtn.textContent = "Rename";
+        renameBtn.className = "small-btn";
+        renameBtn.addEventListener("click", () => renameRow(rowIndex));
+
+        rowBox.appendChild(rowTitle);
+        rowBox.appendChild(renameBtn);
+        rowNameCell.appendChild(rowBox);
+        tr.appendChild(rowNameCell);
+
+        sheet.columns.forEach((_, colIndex) => {
+          const td = document.createElement("td");
+          const input = document.createElement("input");
+          input.value = row.values[colIndex] || "";
+
+          input.addEventListener("input", (e) => {
+            row.values[colIndex] = e.target.value;
+            saveData();
+          });
+
+          td.appendChild(input);
+          tr.appendChild(td);
+        });
+
+        const deleteCell = document.createElement("td");
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.className = "small-btn";
+        deleteBtn.addEventListener("click", () => deleteRow(rowIndex));
+        deleteCell.appendChild(deleteBtn);
+        tr.appendChild(deleteCell);
+
+        sheetTable.appendChild(tr);
+      });
+    }
+
+    function renameMainCategory(oldName) {
+      const newName = prompt("Enter new main category name:", oldName);
+      if (newName === null) return;
+
+      const trimmed = newName.trim();
+      if (!trimmed) return alert("Main category name cannot be empty.");
+      if (trimmed !== oldName && data[trimmed]) return alert("That main category already exists.");
+
+      if (trimmed !== oldName) {
+        data[trimmed] = data[oldName];
+        delete data[oldName];
+      }
+
+      if (currentMainCategory === oldName) {
+        currentMainCategory = trimmed;
+      }
+
+      saveData();
+      renderMainCategories();
+
+      if (!subSection.classList.contains("hidden")) {
+        subSectionTitle.textContent = `${currentMainCategory} - Sub-Categories`;
+        subPathText.textContent = `Main Category: ${currentMainCategory}`;
+      }
+
+      if (!childSection.classList.contains("hidden")) {
+        childPathText.textContent = `Main Category: ${currentMainCategory} > Sub-Category: ${currentSubCategory}`;
+      }
+
+      if (!sheetSection.classList.contains("hidden")) {
+        sheetPathText.textContent = `Main Category: ${currentMainCategory} > Sub-Category: ${currentSubCategory} > Child Sub-Category: ${currentChildCategory}`;
+      }
+    }
+
+    function renameSubCategory(oldName) {
+      const subcategories = data[currentMainCategory].subcategories;
+      const newName = prompt("Enter new sub-category name:", oldName);
+      if (newName === null) return;
+
+      const trimmed = newName.trim();
+      if (!trimmed) return alert("Sub-category name cannot be empty.");
+      if (trimmed !== oldName && subcategories[trimmed]) return alert("That sub-category already exists.");
+
+      if (trimmed !== oldName) {
+        subcategories[trimmed] = subcategories[oldName];
+        delete subcategories[oldName];
+      }
+
+      if (currentSubCategory === oldName) {
+        currentSubCategory = trimmed;
+      }
+
+      saveData();
+      renderSubCategories();
+
+      if (!childSection.classList.contains("hidden")) {
+        childSectionTitle.textContent = `${currentSubCategory} - Child Sub-Categories`;
+        childPathText.textContent = `Main Category: ${currentMainCategory} > Sub-Category: ${currentSubCategory}`;
+      }
+
+      if (!sheetSection.classList.contains("hidden")) {
+        sheetPathText.textContent = `Main Category: ${currentMainCategory} > Sub-Category: ${currentSubCategory} > Child Sub-Category: ${currentChildCategory}`;
+      }
+    }
+
+    function renameChildCategory(oldName) {
+      const children = getCurrentSubCategoryObject().children;
+      const newName = prompt("Enter new child sub-category name:", oldName);
+      if (newName === null) return;
+
+      const trimmed = newName.trim();
+      if (!trimmed) return alert("Child sub-category name cannot be empty.");
+      if (trimmed !== oldName && children[trimmed]) return alert("That child sub-category already exists.");
+
+      if (trimmed !== oldName) {
+        children[trimmed] = children[oldName];
+        delete children[oldName];
+      }
+
+      if (currentChildCategory === oldName) {
+        currentChildCategory = trimmed;
+      }
+
+      saveData();
+      renderChildCategories();
+
+      if (!sheetSection.classList.contains("hidden")) {
+        sheetTitle.textContent = `${currentChildCategory} - Data Sheet`;
+        sheetPathText.textContent = `Main Category: ${currentMainCategory} > Sub-Category: ${currentSubCategory} > Child Sub-Category: ${currentChildCategory}`;
+      }
+    }
+
+    function renameColumn(index) {
+      const sheet = getCurrentChildCategoryObject();
+      const oldName = sheet.columns[index];
+      const newName = prompt("Enter new column name:", oldName);
+      if (newName === null) return;
+
+      const trimmed = newName.trim();
+      if (!trimmed) return alert("Column name cannot be empty.");
+
+      sheet.columns[index] = trimmed;
+      saveData();
+      renderSheet();
+    }
+
+    function renameRow(index) {
+      const sheet = getCurrentChildCategoryObject();
+      const oldName = sheet.rows[index].name;
+      const newName = prompt("Enter new row name:", oldName);
+      if (newName === null) return;
+
+      const trimmed = newName.trim();
+      if (!trimmed) return alert("Row name cannot be empty.");
+
+      sheet.rows[index].name = trimmed;
+      saveData();
+      renderSheet();
+      function deleteColumn(index) {
+      const sheet = getCurrentChildCategoryObject();
+      const colName = sheet.columns[index];
+      if (!confirm(`Remove column "${colName}"?`)) return;
+
+      sheet.columns.splice(index, 1);
+      sheet.rows.forEach(row => row.values.splice(index, 1));
+      saveData();
+      renderSheet();
+    }
+
+    function deleteRow(index) {
+      const sheet = getCurrentChildCategoryObject();
+      const rowName = sheet.rows[index].name;
+      if (!confirm(`Delete row "${rowName}"?`)) return;
+
+      sheet.rows.splice(index, 1);
+      saveData();
+      renderSheet();
+    }
+
+    addMainCategoryBtn.addEventListener("click", () => {
+      const name = mainCategoryNameInput.value.trim();
+      if (!name) return alert("Please enter a main category name.");
+      if (data[name]) return alert("That main category already exists.");
+
+      data[name] = createMainCategoryObject();
+      mainCategoryNameInput.value = "";
+      saveData();
+      renderMainCategories();
+    });
+
+    addSubCategoryBtn.addEventListener("click", () => {
+      if (!currentMainCategory) return;
+
+      const name = subCategoryNameInput.value.trim();
+      if (!name) return alert("Please enter a sub-category name.");
+
+      const subcategories = data[currentMainCategory].subcategories;
+      if (subcategories[name]) return alert("That sub-category already exists.");
+
+      subcategories[name] = createSubCategoryObject();
+      subCategoryNameInput.value = "";
+      saveData();
+      renderSubCategories();
+    });
+
+    addChildCategoryBtn.addEventListener("click", () => {
+      const subObj = getCurrentSubCategoryObject();
+      if (!subObj) return;
+
+      const name = childCategoryNameInput.value.trim();
+      if (!name) return alert("Please enter a child sub-category name.");
+
+      if (subObj.children[name]) return alert("That child sub-category already exists.");
+
+      subObj.children[name] = createChildCategoryObject();
+      childCategoryNameInput.value = "";
+      saveData();
+      renderChildCategories();
+    });
+
+    addColumnBtn.addEventListener("click", () => {
+      const sheet = getCurrentChildCategoryObject();
+      if (!sheet) return;
+
+      const colName = columnNameInput.value.trim();
+      if (!colName) return alert("Please enter a column name.");
+
+      sheet.columns.push(colName);
+      sheet.rows.forEach(row => row.values.push(""));
+
+      columnNameInput.value = "";
+      saveData();
+      renderSheet();
+    });
+
+    addRowBtn.addEventListener("click", () => {
+      const sheet = getCurrentChildCategoryObject();
+      if (!sheet) return;
+
+      const rowName = rowNameInput.value.trim();
+      if (!rowName) return alert("Please enter a row name.");
+
+      sheet.rows.push({
+        name: rowName,
+        values: new Array(sheet.columns.length).fill("")
+      });
+
+      rowNameInput.value = "";
+      saveData();
+      renderSheet();
+    });
+
+    backToMainBtn.addEventListener("click", () => {
+      currentSubCategory = null;
+      currentChildCategory = null;
+      renderMainCategories();
+      showSection("main");
+    });
+
+    backToSubBtn.addEventListener("click", () => {
+      currentChildCategory = null;
+      renderSubCategories();
+      subSectionTitle.textContent = `${currentMainCategory} - Sub-Categories`;
+      subPathText.textContent = `Main Category: ${currentMainCategory}`;
+      showSection("sub");
+    });
+
+    backToChildBtn.addEventListener("click", () => {
+      renderChildCategories();
+      childSectionTitle.textContent = `${currentSubCategory} - Child Sub-Categories`;
+      childPathText.textContent = `Main Category: ${currentMainCategory} > Sub-Category: ${currentSubCategory}`;
+      showSection("child");
+    });
+
+    exportBtn.addEventListener("click", () => {
+      const backup = JSON.stringify(data, null, 2);
+      const blob = new Blob([backup], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "itc-mill-sheets-backup-v2.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      URL.revokeObjectURL(url);
+    });
+
+    importBtn.addEventListener("click", () => {
+      importFile.click();
+    });
+
+    importFile.addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+
+          if (typeof importedData !== "object" || importedData === null || Array.isArray(importedData)) {
+            throw new Error("Invalid backup format.");
+          }
+
+          if (!confirm("Importing will replace current data. Continue?")) {
+            importFile.value = "";
+            return;
+          }
+
+          data = importedData;
+          currentMainCategory = null;
+          currentSubCategory = null;
+          currentChildCategory = null;
+
+          saveData();
+          renderMainCategories();
+          showSection("main");
+          alert("Backup imported successfully.");
+        } catch (err) {
+          alert("Import failed. Please select a valid backup JSON file.");
+        }
+
+        importFile.value = "";
+      };
+
+      reader.readAsText(file);
+    });
+
+    renderMainCategories();
+    showSection("main");
+  </script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js")
+          .then(() => console.log("Service worker registered"))
+          .catch(err => console.error("Service worker registration failed:", err));
+      });
+    }
+  </script>
+</body>
+</html>
+    }
