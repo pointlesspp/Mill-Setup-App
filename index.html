@@ -3,46 +3,308 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Test App</title>
+  <title>ITC Mill Sheets</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 16px;
+      background: #f4f4f4;
+      margin: 0;
+    }
+
+    #app {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      box-sizing: border-box;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 4px 0;
+      font-size: 16px;
+      box-sizing: border-box;
+      border-radius: 8px;
+      border: 1px solid #bbb;
+    }
+
+    button {
+      cursor: pointer;
+      background: #f7f7f7;
+    }
+
+    button:hover {
+      background: #ececec;
+    }
+
+    .top-actions,
+    .backup-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .section-card {
+      background: #fafafa;
+      border: 1px solid #e3e3e3;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .muted {
+      color: #666;
+      font-size: 14px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      background: #eee;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .item-name {
+      flex: 1;
+      min-width: 160px;
+      font-weight: 600;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .small-btn {
+      padding: 6px 8px;
+      font-size: 14px;
+    }
+
+    #importFile {
+      display: none;
+    }
+
+    @media (min-width: 700px) {
+      .top-actions,
+      .backup-actions {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .top-actions input {
+        min-width: 240px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Test App</h1>
+  <div id="app">
+    <h1>ITC Mill Sheets</h1>
 
-  <input type="text" id="mainCategoryName" placeholder="New main category" />
-  <button id="addMainCategoryBtn">Add Main Category</button>
+    <div class="section-card">
+      <div class="top-actions">
+        <input type="text" id="mainCategoryName" placeholder="New main category" />
+        <button id="addMainCategoryBtn">Add Main Category</button>
+      </div>
 
-  <ul id="mainCategoryList"></ul>
+      <div class="backup-actions">
+        <button id="exportBtn">Export Backup</button>
+        <button id="importBtn">Import Backup</button>
+        <input type="file" id="importFile" accept=".json,application/json" />
+      </div>
+
+      <div class="muted">This is the first test layer: main categories only.</div>
+    </div>
+
+    <ul id="mainCategoryList"></ul>
+  </div>
 
   <script>
-    let data = {};
+    let data = JSON.parse(localStorage.getItem("mainCategoryTest")) || {};
 
     const mainCategoryNameInput = document.getElementById("mainCategoryName");
     const addMainCategoryBtn = document.getElementById("addMainCategoryBtn");
     const mainCategoryList = document.getElementById("mainCategoryList");
 
+    const exportBtn = document.getElementById("exportBtn");
+    const importBtn = document.getElementById("importBtn");
+    const importFile = document.getElementById("importFile");
+
+    function saveData() {
+      localStorage.setItem("mainCategoryTest", JSON.stringify(data));
+    }
+
     function renderMainCategories() {
       mainCategoryList.innerHTML = "";
 
-      Object.keys(data).forEach(name => {
+      const names = Object.keys(data);
+
+      if (names.length === 0) {
+        const empty = document.createElement("li");
+        empty.textContent = "No main categories yet.";
+        mainCategoryList.appendChild(empty);
+        return;
+      }
+
+      names.forEach(name => {
         const li = document.createElement("li");
-        li.textContent = name;
+
+        const title = document.createElement("div");
+        title.className = "item-name";
+        title.textContent = name;
+
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+
+        const renameBtn = document.createElement("button");
+        renameBtn.textContent = "Rename";
+        renameBtn.className = "small-btn";
+        renameBtn.addEventListener("click", () => renameMainCategory(name));
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.className = "small-btn";
+        deleteBtn.addEventListener("click", () => deleteMainCategory(name));
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
+
+        li.appendChild(title);
+        li.appendChild(actions);
         mainCategoryList.appendChild(li);
       });
     }
 
-    addMainCategoryBtn.addEventListener("click", () => {
-      alert("Button clicked");
-
+    function addMainCategory() {
       const name = mainCategoryNameInput.value.trim();
+
       if (!name) {
-        alert("No name entered");
+        alert("Please enter a main category name.");
+        return;
+      }
+
+      if (data[name]) {
+        alert("That main category already exists.");
         return;
       }
 
       data[name] = {};
       mainCategoryNameInput.value = "";
+      saveData();
       renderMainCategories();
+    }
+
+    function renameMainCategory(oldName) {
+      const newName = prompt("Enter new main category name:", oldName);
+      if (newName === null) return;
+
+      const trimmed = newName.trim();
+
+      if (!trimmed) {
+        alert("Main category name cannot be empty.");
+        return;
+      }
+
+      if (trimmed !== oldName && data[trimmed]) {
+        alert("That main category already exists.");
+        return;
+      }
+
+      if (trimmed !== oldName) {
+        data[trimmed] = data[oldName];
+        delete data[oldName];
+        saveData();
+        renderMainCategories();
+      }
+    }
+
+    function deleteMainCategory(name) {
+      if (!confirm(`Delete main category "${name}"?`)) return;
+
+      delete data[name];
+      saveData();
+      renderMainCategories();
+    }
+
+    addMainCategoryBtn.addEventListener("click", addMainCategory);
+
+    exportBtn.addEventListener("click", () => {
+      const backup = JSON.stringify(data, null, 2);
+      const blob = new Blob([backup], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "main-category-test-backup.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      URL.revokeObjectURL(url);
     });
+
+    importBtn.addEventListener("click", () => {
+      importFile.click();
+    });
+
+    importFile.addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+
+          if (
+            typeof importedData !== "object" ||
+            importedData === null ||
+            Array.isArray(importedData)
+          ) {
+            throw new Error("Invalid format");
+          }
+
+          if (!confirm("Importing will replace current data. Continue?")) {
+            importFile.value = "";
+            return;
+          }
+
+          data = importedData;
+          saveData();
+          renderMainCategories();
+          alert("Backup imported successfully.");
+        } catch (err) {
+          alert("Import failed. Please select a valid backup JSON file.");
+        }
+
+        importFile.value = "";
+      };
+
+      reader.readAsText(file);
+    });
+
+    renderMainCategories();
   </script>
 </body>
 </html>
