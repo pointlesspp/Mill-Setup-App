@@ -513,7 +513,8 @@
         li.appendChild(actions);
         subCategoryList.appendChild(li);
       });
-      function addSubCategory() {
+    }
+        function addSubCategory() {
       if (!currentMainCategory || !data[currentMainCategory]) return;
 
       const name = subCategoryNameInput.value.trim();
@@ -819,7 +820,7 @@
         sheetTable.appendChild(tr);
       });
     }
-      function addColumn() {
+        function addColumn() {
       const sheet = getCurrentSheet();
       if (!sheet) return;
 
