@@ -152,21 +152,41 @@
           <button id="addSubCategoryBtn">Add Sub-Category</button>
         </div>
 
-        <div class="muted">This is the second test layer: sub-categories under a main category.</div>
+        <div class="muted">Tap a sub-category to open child sub-categories.</div>
       </div>
 
       <ul id="subCategoryList"></ul>
       <br />
       <button id="backToMainBtn">Back to Main Categories</button>
     </div>
+
+    <div id="child-section" class="hidden">
+      <div class="section-card">
+        <h2 id="childSectionTitle"></h2>
+        <div class="path-text" id="childPathText"></div>
+
+        <div class="top-actions">
+          <input type="text" id="childCategoryName" placeholder="New child sub-category" />
+          <button id="addChildCategoryBtn">Add Child Sub-Category</button>
+        </div>
+
+        <div class="muted">This is the third test layer: child sub-categories.</div>
+      </div>
+
+      <ul id="childCategoryList"></ul>
+      <br />
+      <button id="backToSubBtn">Back to Sub-Categories</button>
+    </div>
   </div>
 
   <script>
-    let data = JSON.parse(localStorage.getItem("mainSubCategoryTest")) || {};
+    let data = JSON.parse(localStorage.getItem("mainSubChildTest")) || {};
     let currentMainCategory = null;
+    let currentSubCategory = null;
 
     const mainSection = document.getElementById("main-section");
     const subSection = document.getElementById("sub-section");
+    const childSection = document.getElementById("child-section");
 
     const mainCategoryNameInput = document.getElementById("mainCategoryName");
     const addMainCategoryBtn = document.getElementById("addMainCategoryBtn");
@@ -179,21 +199,36 @@
     const subCategoryList = document.getElementById("subCategoryList");
     const backToMainBtn = document.getElementById("backToMainBtn");
 
+    const childSectionTitle = document.getElementById("childSectionTitle");
+    const childPathText = document.getElementById("childPathText");
+    const childCategoryNameInput = document.getElementById("childCategoryName");
+    const addChildCategoryBtn = document.getElementById("addChildCategoryBtn");
+    const childCategoryList = document.getElementById("childCategoryList");
+    const backToSubBtn = document.getElementById("backToSubBtn");
+
     function saveData() {
-      localStorage.setItem("mainSubCategoryTest", JSON.stringify(data));
+      localStorage.setItem("mainSubChildTest", JSON.stringify(data));
     }
 
     function showSection(name) {
       mainSection.classList.add("hidden");
       subSection.classList.add("hidden");
+      childSection.classList.add("hidden");
 
       if (name === "main") mainSection.classList.remove("hidden");
       if (name === "sub") subSection.classList.remove("hidden");
+      if (name === "child") childSection.classList.remove("hidden");
     }
 
     function createMainCategoryObject() {
       return {
         subcategories: {}
+      };
+    }
+
+    function createSubCategoryObject() {
+      return {
+        children: {}
       };
     }
 
@@ -289,6 +324,10 @@
           subSectionTitle.textContent = `${currentMainCategory} - Sub-Categories`;
           subPathText.textContent = `Main Category: ${currentMainCategory}`;
         }
+
+        if (!childSection.classList.contains("hidden")) {
+          childPathText.textContent = `Main Category: ${currentMainCategory} > Sub-Category: ${currentSubCategory}`;
+        }
       }
     }
 
@@ -299,6 +338,7 @@
 
       if (currentMainCategory === name) {
         currentMainCategory = null;
+        currentSubCategory = null;
       }
 
       saveData();
@@ -307,6 +347,7 @@
 
     function openMainCategory(name) {
       currentMainCategory = name;
+      currentSubCategory = null;
       subSectionTitle.textContent = `${name} - Sub-Categories`;
       subPathText.textContent = `Main Category: ${name}`;
       renderSubCategories();
@@ -330,9 +371,10 @@
       subcategories.forEach(name => {
         const li = document.createElement("li");
 
-        const title = document.createElement("div");
-        title.className = "item-name";
-        title.textContent = name;
+        const openBtn = document.createElement("button");
+        openBtn.className = "item-name-btn";
+        openBtn.textContent = name;
+        openBtn.addEventListener("click", () => openSubCategory(name));
 
         const actions = document.createElement("div");
         actions.className = "item-actions";
@@ -350,12 +392,11 @@
         actions.appendChild(renameBtn);
         actions.appendChild(deleteBtn);
 
-        li.appendChild(title);
+        li.appendChild(openBtn);
         li.appendChild(actions);
         subCategoryList.appendChild(li);
       });
     }
-
     function addSubCategory() {
       if (!currentMainCategory || !data[currentMainCategory]) return;
 
@@ -373,7 +414,7 @@
         return;
       }
 
-      subcategories[name] = {};
+      subcategories[name] = createSubCategoryObject();
       subCategoryNameInput.value = "";
       saveData();
       renderSubCategories();
@@ -399,26 +440,165 @@
       if (trimmed !== oldName) {
         subcategories[trimmed] = subcategories[oldName];
         delete subcategories[oldName];
+
+        if (currentSubCategory === oldName) {
+          currentSubCategory = trimmed;
+        }
+
         saveData();
         renderSubCategories();
+
+        if (!childSection.classList.contains("hidden")) {
+          childSectionTitle.textContent = `${currentSubCategory} - Child Sub-Categories`;
+          childPathText.textContent = `Main Category: ${currentMainCategory} > Sub-Category: ${currentSubCategory}`;
+        }
       }
     }
 
     function deleteSubCategory(name) {
-      if (!confirm(`Delete sub-category "${name}"?`)) return;
+      if (!confirm(`Delete sub-category "${name}" and everything inside it?`)) return;
 
       delete data[currentMainCategory].subcategories[name];
+
+      if (currentSubCategory === name) {
+        currentSubCategory = null;
+      }
+
       saveData();
       renderSubCategories();
     }
 
+    function openSubCategory(name) {
+      currentSubCategory = name;
+      childSectionTitle.textContent = `${name} - Child Sub-Categories`;
+      childPathText.textContent = `Main Category: ${currentMainCategory} > Sub-Category: ${name}`;
+      renderChildCategories();
+      showSection("child");
+    }
+
+    function renderChildCategories() {
+      childCategoryList.innerHTML = "";
+
+      if (!currentMainCategory || !currentSubCategory) return;
+
+      const subObj = data[currentMainCategory]?.subcategories?.[currentSubCategory];
+      if (!subObj) return;
+
+      const childNames = Object.keys(subObj.children);
+
+      if (childNames.length === 0) {
+        const empty = document.createElement("li");
+        empty.textContent = "No child sub-categories yet.";
+        childCategoryList.appendChild(empty);
+        return;
+      }
+
+      childNames.forEach(name => {
+        const li = document.createElement("li");
+
+        const title = document.createElement("div");
+        title.className = "item-name";
+        title.textContent = name;
+
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+
+        const renameBtn = document.createElement("button");
+        renameBtn.textContent = "Rename";
+        renameBtn.className = "small-btn";
+        renameBtn.addEventListener("click", () => renameChildCategory(name));
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.className = "small-btn";
+        deleteBtn.addEventListener("click", () => deleteChildCategory(name));
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
+
+        li.appendChild(title);
+        li.appendChild(actions);
+        childCategoryList.appendChild(li);
+      });
+    }
+
+    function addChildCategory() {
+      if (!currentMainCategory || !currentSubCategory) return;
+
+      const name = childCategoryNameInput.value.trim();
+
+      if (!name) {
+        alert("Please enter a child sub-category name.");
+        return;
+      }
+
+      const subObj = data[currentMainCategory]?.subcategories?.[currentSubCategory];
+      if (!subObj) return;
+
+      if (subObj.children[name]) {
+        alert("That child sub-category already exists.");
+        return;
+      }
+
+      subObj.children[name] = {};
+      childCategoryNameInput.value = "";
+      saveData();
+      renderChildCategories();
+    }
+
+    function renameChildCategory(oldName) {
+      const subObj = data[currentMainCategory]?.subcategories?.[currentSubCategory];
+      if (!subObj) return;
+
+      const newName = prompt("Enter new child sub-category name:", oldName);
+      if (newName === null) return;
+
+      const trimmed = newName.trim();
+
+      if (!trimmed) {
+        alert("Child sub-category name cannot be empty.");
+        return;
+      }
+
+      if (trimmed !== oldName && subObj.children[trimmed]) {
+        alert("That child sub-category already exists.");
+        return;
+      }
+
+      if (trimmed !== oldName) {
+        subObj.children[trimmed] = subObj.children[oldName];
+        delete subObj.children[oldName];
+        saveData();
+        renderChildCategories();
+      }
+    }
+    function deleteChildCategory(name) {
+      const subObj = data[currentMainCategory]?.subcategories?.[currentSubCategory];
+      if (!subObj) return;
+
+      if (!confirm(`Delete child sub-category "${name}"?`)) return;
+
+      delete subObj.children[name];
+      saveData();
+      renderChildCategories();
+    }
+
     addMainCategoryBtn.addEventListener("click", addMainCategory);
     addSubCategoryBtn.addEventListener("click", addSubCategory);
+    addChildCategoryBtn.addEventListener("click", addChildCategory);
 
     backToMainBtn.addEventListener("click", () => {
       currentMainCategory = null;
+      currentSubCategory = null;
       renderMainCategories();
       showSection("main");
+    });
+
+    backToSubBtn.addEventListener("click", () => {
+      renderSubCategories();
+      subSectionTitle.textContent = `${currentMainCategory} - Sub-Categories`;
+      subPathText.textContent = `Main Category: ${currentMainCategory}`;
+      showSection("sub");
     });
 
     renderMainCategories();
