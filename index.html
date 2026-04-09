@@ -22,7 +22,7 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     }
 
-    h1 {
+    h1, h2 {
       margin-top: 0;
     }
 
@@ -44,8 +44,7 @@
       background: #ececec;
     }
 
-    .top-actions,
-    .backup-actions {
+    .top-actions {
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -63,6 +62,13 @@
     .muted {
       color: #666;
       font-size: 14px;
+    }
+
+    .path-text {
+      color: #444;
+      font-size: 14px;
+      margin-bottom: 10px;
+      word-break: break-word;
     }
 
     ul {
@@ -83,10 +89,12 @@
       flex-wrap: wrap;
     }
 
+    .item-name-btn,
     .item-name {
       flex: 1;
       min-width: 160px;
       font-weight: 600;
+      text-align: left;
     }
 
     .item-actions {
@@ -100,13 +108,12 @@
       font-size: 14px;
     }
 
-    #importFile {
+    .hidden {
       display: none;
     }
 
     @media (min-width: 700px) {
-      .top-actions,
-      .backup-actions {
+      .top-actions {
         flex-direction: row;
         align-items: center;
         flex-wrap: wrap;
@@ -122,37 +129,72 @@
   <div id="app">
     <h1>ITC Mill Sheets</h1>
 
-    <div class="section-card">
-      <div class="top-actions">
-        <input type="text" id="mainCategoryName" placeholder="New main category" />
-        <button id="addMainCategoryBtn">Add Main Category</button>
+    <div id="main-section">
+      <div class="section-card">
+        <div class="top-actions">
+          <input type="text" id="mainCategoryName" placeholder="New main category" />
+          <button id="addMainCategoryBtn">Add Main Category</button>
+        </div>
+
+        <div class="muted">Tap a main category to open its sub-categories.</div>
       </div>
 
-      <div class="backup-actions">
-        <button id="exportBtn">Export Backup</button>
-        <button id="importBtn">Import Backup</button>
-        <input type="file" id="importFile" accept=".json,application/json" />
-      </div>
-
-      <div class="muted">This is the first test layer: main categories only.</div>
+      <ul id="mainCategoryList"></ul>
     </div>
 
-    <ul id="mainCategoryList"></ul>
+    <div id="sub-section" class="hidden">
+      <div class="section-card">
+        <h2 id="subSectionTitle"></h2>
+        <div class="path-text" id="subPathText"></div>
+
+        <div class="top-actions">
+          <input type="text" id="subCategoryName" placeholder="New sub-category" />
+          <button id="addSubCategoryBtn">Add Sub-Category</button>
+        </div>
+
+        <div class="muted">This is the second test layer: sub-categories under a main category.</div>
+      </div>
+
+      <ul id="subCategoryList"></ul>
+      <br />
+      <button id="backToMainBtn">Back to Main Categories</button>
+    </div>
   </div>
 
   <script>
-    let data = JSON.parse(localStorage.getItem("mainCategoryTest")) || {};
+    let data = JSON.parse(localStorage.getItem("mainSubCategoryTest")) || {};
+    let currentMainCategory = null;
+
+    const mainSection = document.getElementById("main-section");
+    const subSection = document.getElementById("sub-section");
 
     const mainCategoryNameInput = document.getElementById("mainCategoryName");
     const addMainCategoryBtn = document.getElementById("addMainCategoryBtn");
     const mainCategoryList = document.getElementById("mainCategoryList");
 
-    const exportBtn = document.getElementById("exportBtn");
-    const importBtn = document.getElementById("importBtn");
-    const importFile = document.getElementById("importFile");
+    const subSectionTitle = document.getElementById("subSectionTitle");
+    const subPathText = document.getElementById("subPathText");
+    const subCategoryNameInput = document.getElementById("subCategoryName");
+    const addSubCategoryBtn = document.getElementById("addSubCategoryBtn");
+    const subCategoryList = document.getElementById("subCategoryList");
+    const backToMainBtn = document.getElementById("backToMainBtn");
 
     function saveData() {
-      localStorage.setItem("mainCategoryTest", JSON.stringify(data));
+      localStorage.setItem("mainSubCategoryTest", JSON.stringify(data));
+    }
+
+    function showSection(name) {
+      mainSection.classList.add("hidden");
+      subSection.classList.add("hidden");
+
+      if (name === "main") mainSection.classList.remove("hidden");
+      if (name === "sub") subSection.classList.remove("hidden");
+    }
+
+    function createMainCategoryObject() {
+      return {
+        subcategories: {}
+      };
     }
 
     function renderMainCategories() {
@@ -170,9 +212,10 @@
       names.forEach(name => {
         const li = document.createElement("li");
 
-        const title = document.createElement("div");
-        title.className = "item-name";
-        title.textContent = name;
+        const openBtn = document.createElement("button");
+        openBtn.className = "item-name-btn";
+        openBtn.textContent = name;
+        openBtn.addEventListener("click", () => openMainCategory(name));
 
         const actions = document.createElement("div");
         actions.className = "item-actions";
@@ -190,7 +233,7 @@
         actions.appendChild(renameBtn);
         actions.appendChild(deleteBtn);
 
-        li.appendChild(title);
+        li.appendChild(openBtn);
         li.appendChild(actions);
         mainCategoryList.appendChild(li);
       });
@@ -209,7 +252,7 @@
         return;
       }
 
-      data[name] = {};
+      data[name] = createMainCategoryObject();
       mainCategoryNameInput.value = "";
       saveData();
       renderMainCategories();
@@ -234,77 +277,152 @@
       if (trimmed !== oldName) {
         data[trimmed] = data[oldName];
         delete data[oldName];
+
+        if (currentMainCategory === oldName) {
+          currentMainCategory = trimmed;
+        }
+
         saveData();
         renderMainCategories();
+
+        if (!subSection.classList.contains("hidden")) {
+          subSectionTitle.textContent = `${currentMainCategory} - Sub-Categories`;
+          subPathText.textContent = `Main Category: ${currentMainCategory}`;
+        }
       }
     }
 
     function deleteMainCategory(name) {
-      if (!confirm(`Delete main category "${name}"?`)) return;
+      if (!confirm(`Delete main category "${name}" and everything inside it?`)) return;
 
       delete data[name];
+
+      if (currentMainCategory === name) {
+        currentMainCategory = null;
+      }
+
       saveData();
       renderMainCategories();
     }
 
+    function openMainCategory(name) {
+      currentMainCategory = name;
+      subSectionTitle.textContent = `${name} - Sub-Categories`;
+      subPathText.textContent = `Main Category: ${name}`;
+      renderSubCategories();
+      showSection("sub");
+    }
+
+    function renderSubCategories() {
+      subCategoryList.innerHTML = "";
+
+      if (!currentMainCategory || !data[currentMainCategory]) return;
+
+      const subcategories = Object.keys(data[currentMainCategory].subcategories);
+
+      if (subcategories.length === 0) {
+        const empty = document.createElement("li");
+        empty.textContent = "No sub-categories yet.";
+        subCategoryList.appendChild(empty);
+        return;
+      }
+
+      subcategories.forEach(name => {
+        const li = document.createElement("li");
+
+        const title = document.createElement("div");
+        title.className = "item-name";
+        title.textContent = name;
+
+        const actions = document.createElement("div");
+        actions.className = "item-actions";
+
+        const renameBtn = document.createElement("button");
+        renameBtn.textContent = "Rename";
+        renameBtn.className = "small-btn";
+        renameBtn.addEventListener("click", () => renameSubCategory(name));
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.className = "small-btn";
+        deleteBtn.addEventListener("click", () => deleteSubCategory(name));
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
+
+        li.appendChild(title);
+        li.appendChild(actions);
+        subCategoryList.appendChild(li);
+      });
+    }
+
+    function addSubCategory() {
+      if (!currentMainCategory || !data[currentMainCategory]) return;
+
+      const name = subCategoryNameInput.value.trim();
+
+      if (!name) {
+        alert("Please enter a sub-category name.");
+        return;
+      }
+
+      const subcategories = data[currentMainCategory].subcategories;
+
+      if (subcategories[name]) {
+        alert("That sub-category already exists.");
+        return;
+      }
+
+      subcategories[name] = {};
+      subCategoryNameInput.value = "";
+      saveData();
+      renderSubCategories();
+    }
+
+    function renameSubCategory(oldName) {
+      const subcategories = data[currentMainCategory].subcategories;
+      const newName = prompt("Enter new sub-category name:", oldName);
+      if (newName === null) return;
+
+      const trimmed = newName.trim();
+
+      if (!trimmed) {
+        alert("Sub-category name cannot be empty.");
+        return;
+      }
+
+      if (trimmed !== oldName && subcategories[trimmed]) {
+        alert("That sub-category already exists.");
+        return;
+      }
+
+      if (trimmed !== oldName) {
+        subcategories[trimmed] = subcategories[oldName];
+        delete subcategories[oldName];
+        saveData();
+        renderSubCategories();
+      }
+    }
+
+    function deleteSubCategory(name) {
+      if (!confirm(`Delete sub-category "${name}"?`)) return;
+
+      delete data[currentMainCategory].subcategories[name];
+      saveData();
+      renderSubCategories();
+    }
+
     addMainCategoryBtn.addEventListener("click", addMainCategory);
+    addSubCategoryBtn.addEventListener("click", addSubCategory);
 
-    exportBtn.addEventListener("click", () => {
-      const backup = JSON.stringify(data, null, 2);
-      const blob = new Blob([backup], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "main-category-test-backup.json";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      URL.revokeObjectURL(url);
-    });
-
-    importBtn.addEventListener("click", () => {
-      importFile.click();
-    });
-
-    importFile.addEventListener("change", (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const importedData = JSON.parse(e.target.result);
-
-          if (
-            typeof importedData !== "object" ||
-            importedData === null ||
-            Array.isArray(importedData)
-          ) {
-            throw new Error("Invalid format");
-          }
-
-          if (!confirm("Importing will replace current data. Continue?")) {
-            importFile.value = "";
-            return;
-          }
-
-          data = importedData;
-          saveData();
-          renderMainCategories();
-          alert("Backup imported successfully.");
-        } catch (err) {
-          alert("Import failed. Please select a valid backup JSON file.");
-        }
-
-        importFile.value = "";
-      };
-
-      reader.readAsText(file);
+    backToMainBtn.addEventListener("click", () => {
+      currentMainCategory = null;
+      renderMainCategories();
+      showSection("main");
     });
 
     renderMainCategories();
+    showSection("main");
   </script>
 </body>
 </html>
