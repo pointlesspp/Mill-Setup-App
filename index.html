@@ -45,7 +45,8 @@
     }
 
     .top-actions,
-    .sheet-actions {
+    .sheet-actions,
+    .backup-actions {
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -151,9 +152,14 @@
       align-items: center;
     }
 
+    #importFile {
+      display: none;
+    }
+
     @media (min-width: 700px) {
       .top-actions,
-      .sheet-actions {
+      .sheet-actions,
+      .backup-actions {
         flex-direction: row;
         align-items: center;
         flex-wrap: wrap;
@@ -175,6 +181,12 @@
         <div class="top-actions">
           <input type="text" id="mainCategoryName" placeholder="New main category" />
           <button id="addMainCategoryBtn">Add Main Category</button>
+        </div>
+
+        <div class="backup-actions">
+          <button id="exportBtn">Export Backup</button>
+          <button id="importBtn">Import Backup</button>
+          <input type="file" id="importFile" accept=".json,application/json" />
         </div>
 
         <div class="muted">Tap a main category to open its sub-categories.</div>
@@ -283,6 +295,10 @@
     const addRowBtn = document.getElementById("addRowBtn");
     const sheetTable = document.getElementById("sheetTable");
     const backToChildBtn = document.getElementById("backToChildBtn");
+
+    const exportBtn = document.getElementById("exportBtn");
+    const importBtn = document.getElementById("importBtn");
+    const importFile = document.getElementById("importFile");
 
     function saveData() {
       localStorage.setItem("mainSubChildSheetTest", JSON.stringify(data));
@@ -497,8 +513,7 @@
         li.appendChild(actions);
         subCategoryList.appendChild(li);
       });
-      
-    }function addSubCategory() {
+      function addSubCategory() {
       if (!currentMainCategory || !data[currentMainCategory]) return;
 
       const name = subCategoryNameInput.value.trim();
@@ -804,7 +819,7 @@
         sheetTable.appendChild(tr);
       });
     }
-    function addColumn() {
+      function addColumn() {
       const sheet = getCurrentSheet();
       if (!sheet) return;
 
@@ -912,6 +927,66 @@
     addChildCategoryBtn.addEventListener("click", addChildCategory);
     addColumnBtn.addEventListener("click", addColumn);
     addRowBtn.addEventListener("click", addRow);
+
+    exportBtn.addEventListener("click", () => {
+      const backup = JSON.stringify(data, null, 2);
+      const blob = new Blob([backup], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "itc-mill-sheets-backup.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      URL.revokeObjectURL(url);
+    });
+
+    importBtn.addEventListener("click", () => {
+      importFile.click();
+    });
+
+    importFile.addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+
+          if (
+            typeof importedData !== "object" ||
+            importedData === null ||
+            Array.isArray(importedData)
+          ) {
+            throw new Error("Invalid format");
+          }
+
+          if (!confirm("Importing will replace current data. Continue?")) {
+            importFile.value = "";
+            return;
+          }
+
+          data = importedData;
+          currentMainCategory = null;
+          currentSubCategory = null;
+          currentChildCategory = null;
+
+          saveData();
+          renderMainCategories();
+          showSection("main");
+          alert("Backup imported successfully.");
+        } catch (err) {
+          alert("Import failed. Please select a valid backup JSON file.");
+        }
+
+        importFile.value = "";
+      };
+
+      reader.readAsText(file);
+    });
 
     backToMainBtn.addEventListener("click", () => {
       currentMainCategory = null;
